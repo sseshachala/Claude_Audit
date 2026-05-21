@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Claude Code Audit — /Users/sudhiseshachala/projects/narratr-website</title>
+<style>
+  :root {
+    --bg: #0d0e10;
+    --panel: #15171b;
+    --panel-2: #1c1f25;
+    --border: #2a2e36;
+    --text: #e8e6e1;
+    --text-dim: #8a8f99;
+    --text-faint: #5a5f68;
+    --high: #ff5d4d;
+    --high-bg: rgba(255, 93, 77, 0.08);
+    --medium: #f0b429;
+    --medium-bg: rgba(240, 180, 41, 0.08);
+    --low: #6fcf97;
+    --low-bg: rgba(111, 207, 151, 0.06);
+    --info: #6a8caf;
+    --accent: #e8e6e1;
+    --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace;
+    --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Hoefler Text', Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 4rem;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 3rem 2rem; }
+
+  /* Header */
+  .head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .head h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 2.6rem;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+    font-style: italic;
+  }
+  .head .sub { color: var(--text-dim); font-size: 0.85rem; }
+  .head .sub code { color: var(--text); }
+  .head .progress-box {
+    text-align: right;
+    border-left: 1px solid var(--border);
+    padding-left: 2rem;
+  }
+  .head .progress-num {
+    font-family: var(--serif);
+    font-size: 3.2rem;
+    line-height: 1;
+    color: var(--text);
+  }
+  .head .progress-num .of { color: var(--text-faint); font-size: 1.5rem; }
+  .head .progress-label {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.4rem;
+  }
+
+  /* Summary counts row */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+  }
+  .summary > div {
+    padding: 1.2rem 1.5rem;
+    border-right: 1px solid var(--border);
+  }
+  .summary > div:last-child { border-right: 0; }
+  .summary .n { font-family: var(--serif); font-size: 2.2rem; line-height: 1; }
+  .summary .l {
+    font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--text-dim); margin-top: 0.4rem;
+  }
+  .summary .high .n { color: var(--high); }
+  .summary .medium .n { color: var(--medium); }
+  .summary .low .n { color: var(--low); }
+  .summary .info .n { color: var(--info); }
+
+  /* Surface chips */
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .chip {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .chip:hover { border-color: var(--text-dim); }
+  .chip.active { background: var(--panel-2); border-color: var(--text); }
+  .chip-counts { display: inline-flex; gap: 0.3rem; font-variant-numeric: tabular-nums; }
+  .chip-h { color: var(--high); }
+  .chip-m { color: var(--medium); }
+  .chip-l { color: var(--low); }
+
+  /* Section heads */
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.4rem;
+    font-style: italic;
+    margin: 2.5rem 0 1rem;
+    color: var(--text);
+  }
+  h2 .h2-count {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-left: 0.7rem;
+    font-style: normal;
+    letter-spacing: 0.1em;
+  }
+
+  /* Task list */
+  .tasks { list-style: none; padding: 0; margin: 0; }
+  .task {
+    border: 1px solid var(--border);
+    border-left-width: 3px;
+    background: var(--panel);
+    margin-bottom: 0.5rem;
+    transition: border-color 0.15s, opacity 0.2s;
+  }
+  .task-high { border-left-color: var(--high); }
+  .task-medium { border-left-color: var(--medium); }
+  .task-low { border-left-color: var(--low); }
+  .task.done { opacity: 0.4; }
+  .task.done .headline { text-decoration: line-through; text-decoration-color: var(--text-faint); }
+  .task.hide { display: none; }
+
+  .task-head {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 0.9rem 1.2rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .task-head input[type=checkbox] {
+    appearance: none;
+    width: 1.05rem;
+    height: 1.05rem;
+    border: 1px solid var(--text-dim);
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    top: 2px;
+    margin: 0;
+  }
+  .task-head input[type=checkbox]:checked {
+    background: var(--text);
+    border-color: var(--text);
+  }
+  .task-head input[type=checkbox]:checked::after {
+    content: "✓";
+    position: absolute;
+    color: var(--bg);
+    font-size: 0.85rem;
+    top: -3px;
+    left: 1.5px;
+  }
+  .sev {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid currentColor;
+  }
+  .sev-high { color: var(--high); }
+  .sev-medium { color: var(--medium); }
+  .sev-low { color: var(--low); }
+  .surface {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .headline { color: var(--text); }
+
+  .task-body {
+    padding: 0 1.2rem 1rem 3.3rem;
+    border-top: 1px dashed var(--border);
+    margin-top: -1px;
+  }
+  .action {
+    margin: 0.9rem 0 0.8rem;
+    color: var(--text);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .action .do {
+    color: var(--text-faint);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-right: 0.6rem;
+  }
+  details { margin-top: 0.5rem; color: var(--text-dim); }
+  summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0;
+    list-style: none;
+  }
+  summary::before { content: "+ "; }
+  details[open] summary::before { content: "− "; }
+  .detail { font-size: 0.85rem; line-height: 1.55; margin: 0.5rem 0; }
+  .ev, .loc { margin: 0.4rem 0; font-size: 0.78rem; }
+  .ev-label {
+    display: inline-block;
+    color: var(--text-faint);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-right: 0.6rem;
+    min-width: 4.5rem;
+  }
+  code {
+    background: var(--panel-2);
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.8rem;
+    word-break: break-all;
+  }
+
+  /* Informational list */
+  .info-list { list-style: none; padding: 0; margin: 0; }
+  .info-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .info-row .info-detail { display: block; color: var(--text-dim); font-size: 0.78rem; margin-top: 0.2rem; }
+  .info-row .info-title { color: var(--text); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+  .toolbar .left { display: flex; gap: 0.5rem; align-items: center; }
+  .toolbar button.tb {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .toolbar button.tb:hover { color: var(--text); border-color: var(--text-dim); }
+  .toolbar button.tb.active { color: var(--text); border-color: var(--text); }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 0.75rem;
+    text-align: center;
+  }
+  footer a { color: var(--text-dim); }
+
+  @media (max-width: 700px) {
+    .head { grid-template-columns: 1fr; }
+    .head .progress-box { border-left: 0; padding-left: 0; text-align: left; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .summary > div:nth-child(2) { border-right: 0; }
+    .task-head { grid-template-columns: auto 1fr; row-gap: 0.4rem; }
+    .task-head .sev, .task-head .surface { grid-column: 2; }
+    .task-body { padding-left: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div>
+      <h1>Claude Code Audit</h1>
+      <div class="sub">
+        <div><code>/Users/sudhiseshachala/projects/narratr-website</code></div>
+        <div style="margin-top:0.3rem; color:var(--text-faint);">Generated 2026-05-21T04:17:37+00:00</div>
+      </div>
+    </div>
+    <div class="progress-box">
+      <div class="progress-num"><span id="done-count">0</span><span class="of"> / 2</span></div>
+      <div class="progress-label">tasks resolved</div>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="high"><div class="n">1</div><div class="l">High</div></div>
+    <div class="medium"><div class="n">0</div><div class="l">Medium</div></div>
+    <div class="low"><div class="n">1</div><div class="l">Low</div></div>
+    <div class="info"><div class="n">13</div><div class="l">Info</div></div>
+  </div>
+
+  <div class="chip-row" id="surface-filter">
+    <button class="chip" data-filter-surface="claude_md">
+            <span class="chip-label">CLAUDE.md</span>
+            <span class="chip-counts">
+              <span class="chip-h">0</span>
+              <span class="chip-m">0</span>
+              <span class="chip-l">0</span>
+            </span>
+        </button>
+<button class="chip" data-filter-surface="hooks">
+            <span class="chip-label">Hooks</span>
+            <span class="chip-counts">
+              <span class="chip-h">0</span>
+              <span class="chip-m">0</span>
+              <span class="chip-l">0</span>
+            </span>
+        </button>
+<button class="chip" data-filter-surface="skills">
+            <span class="chip-label">Skills</span>
+            <span class="chip-counts">
+              <span class="chip-h">1</span>
+              <span class="chip-m">0</span>
+              <span class="chip-l">0</span>
+            </span>
+        </button>
+<button class="chip" data-filter-surface="plugins">
+            <span class="chip-label">Plugins</span>
+            <span class="chip-counts">
+              <span class="chip-h">0</span>
+              <span class="chip-m">0</span>
+              <span class="chip-l">1</span>
+            </span>
+        </button>
+<button class="chip" data-filter-surface="mcp">
+            <span class="chip-label">MCP Servers</span>
+            <span class="chip-counts">
+              <span class="chip-h">0</span>
+              <span class="chip-m">0</span>
+              <span class="chip-l">0</span>
+            </span>
+        </button>
+<button class="chip" data-filter-surface="subagents">
+            <span class="chip-label">Subagents</span>
+            <span class="chip-counts">
+              <span class="chip-h">0</span>
+              <span class="chip-m">0</span>
+              <span class="chip-l">0</span>
+            </span>
+        </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="left">
+      <button class="tb active" data-filter-sev="all">All</button>
+      <button class="tb" data-filter-sev="HIGH">High only</button>
+      <button class="tb" data-filter-sev="MEDIUM">Medium+</button>
+      <button class="tb" data-filter-sev="hide-done">Hide done</button>
+    </div>
+    <div>
+      <button class="tb" id="reset-state">Reset checkmarks</button>
+    </div>
+  </div>
+
+  <ul class="tasks" id="tasks">
+    
+<li class="task task-high" data-severity="HIGH" data-surface="skills">
+  <label class="task-head">
+    <input type="checkbox" data-task="0" />
+    <span class="sev sev-high">HIGH</span>
+    <span class="surface">Skills</span>
+    <span class="headline">Project skill 'integration-nextjs-app-router' not in version control</span>
+  </label>
+  <div class="task-body">
+    <p class="action"><span class="do">Do this →</span> git add the skill or move it to user scope with a code review on import.</p>
+    <details>
+      <summary>Why</summary>
+      <p class="detail">A skill loaded automatically by directory context, with no review trail.</p>
+      <div class="loc"><span class="ev-label">Location</span><code>/Users/sudhiseshachala/projects/narratr-website/.claude/skills/integration-nextjs-app-router/SKILL.md</code></div>
+      
+    </details>
+  </div>
+</li>
+
+<li class="task task-low" data-severity="LOW" data-surface="plugins">
+  <label class="task-head">
+    <input type="checkbox" data-task="1" />
+    <span class="sev sev-low">LOW</span>
+    <span class="surface">Plugins</span>
+    <span class="headline">Plugin enabled: vercel@claude-plugins-official</span>
+  </label>
+  <div class="task-body">
+    <p class="action"><span class="do">Do this →</span> Confirm the marketplace is on your org's approved list. Pin to a specific plugin version where possible.</p>
+    <details>
+      <summary>Why</summary>
+      <p class="detail">Marketplace: claude-plugins-official. Scope: user.</p>
+      <div class="loc"><span class="ev-label">Location</span><code>/Users/sudhiseshachala/.claude/settings.json</code></div>
+      
+    </details>
+  </div>
+</li>
+  </ul>
+
+  <h2>Informational <span class="h2-count">13 ITEMS</span></h2>
+  <ul class="info-list">
+    <li class="info-row" data-surface="claude_md">
+            <span class="surface">CLAUDE.md</span>
+            <span class="info-title">No CLAUDE.md found</span>
+            <span class="info-detail">Neither user-level nor project-level CLAUDE.md exists. Claude runs with default instructions only.</span>
+        </li>
+<li class="info-row" data-surface="hooks">
+            <span class="surface">Hooks</span>
+            <span class="info-title">No hooks configured</span>
+            <span class="info-detail">No PreToolUse/PostToolUse/Stop/Notification hooks present in any settings layer.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: ai-pm (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: ux-expert (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: prompt-engineer (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: vp-eng (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: e2e-tester (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: fullstack (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: ship-flow (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: db-middleware (user)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="skills">
+            <span class="surface">Skills</span>
+            <span class="info-title">Skill: integration-nextjs-app-router (project)</span>
+            <span class="info-detail">Auto-discovered when the description matches the task.</span>
+        </li>
+<li class="info-row" data-surface="mcp">
+            <span class="surface">MCP Servers</span>
+            <span class="info-title">No MCP servers configured</span>
+            <span class="info-detail">No .mcp.json, ~/.claude.json mcpServers, or managed MCP file found.</span>
+        </li>
+<li class="info-row" data-surface="subagents">
+            <span class="surface">Subagents</span>
+            <span class="info-title">No custom subagents defined</span>
+            <span class="info-detail">No agent files found in user or project agent directories.</span>
+        </li>
+  </ul>
+
+  <footer>
+    Static HTML — open in any browser. Checkmarks save to your browser's localStorage.
+  </footer>
+</div>
+
+<script>
+(function() {
+  const KEY = "claude-audit::/Users/sudhiseshachala/projects/narratr-website::2026-05-21T04:17:37+00:00";
+  const tasks = document.querySelectorAll('.task');
+  const doneCount = document.getElementById('done-count');
+
+  // Load saved state
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { state = {}; }
+
+  function updateProgress() {
+    const total = tasks.length;
+    const done = document.querySelectorAll('.task.done').length;
+    doneCount.textContent = done;
+  }
+
+  function applyState(li) {
+    const cb = li.querySelector('input[type=checkbox]');
+    const id = cb.dataset.task;
+    if (state[id]) {
+      cb.checked = true;
+      li.classList.add('done');
+    }
+  }
+
+  tasks.forEach(li => {
+    applyState(li);
+    const cb = li.querySelector('input[type=checkbox]');
+    cb.addEventListener('change', () => {
+      const id = cb.dataset.task;
+      if (cb.checked) {
+        state[id] = true;
+        li.classList.add('done');
+      } else {
+        delete state[id];
+        li.classList.remove('done');
+      }
+      localStorage.setItem(KEY, JSON.stringify(state));
+      updateProgress();
+      applyHideDone();
+    });
+  });
+  updateProgress();
+
+  // Severity filter
+  let sevFilter = 'all';
+  let hideDone = false;
+  let surfaceFilter = null;
+
+  function refresh() {
+    tasks.forEach(li => {
+      const sev = li.dataset.severity;
+      const surface = li.dataset.surface;
+      const isDone = li.classList.contains('done');
+      let show = true;
+      if (sevFilter === 'HIGH' && sev !== 'HIGH') show = false;
+      if (sevFilter === 'MEDIUM' && sev === 'LOW') show = false;
+      if (hideDone && isDone) show = false;
+      if (surfaceFilter && surface !== surfaceFilter) show = false;
+      li.classList.toggle('hide', !show);
+    });
+  }
+
+  function applyHideDone() { if (hideDone) refresh(); }
+
+  document.querySelectorAll('[data-filter-sev]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.filterSev;
+      if (v === 'hide-done') {
+        hideDone = !hideDone;
+        btn.classList.toggle('active', hideDone);
+      } else {
+        sevFilter = v;
+        document.querySelectorAll('[data-filter-sev]').forEach(b => {
+          if (b.dataset.filterSev !== 'hide-done') b.classList.remove('active');
+        });
+        btn.classList.add('active');
+      }
+      refresh();
+    });
+  });
+
+  document.querySelectorAll('[data-filter-surface]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const v = chip.dataset.filterSurface;
+      if (surfaceFilter === v) {
+        surfaceFilter = null;
+        chip.classList.remove('active');
+      } else {
+        surfaceFilter = v;
+        document.querySelectorAll('[data-filter-surface]').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      }
+      refresh();
+    });
+  });
+
+  document.getElementById('reset-state').addEventListener('click', () => {
+    if (!confirm('Clear all checkmarks?')) return;
+    state = {};
+    localStorage.removeItem(KEY);
+    tasks.forEach(li => {
+      li.classList.remove('done');
+      li.querySelector('input[type=checkbox]').checked = false;
+    });
+    updateProgress();
+  });
+})();
+</script>
+</body>
+</html>
